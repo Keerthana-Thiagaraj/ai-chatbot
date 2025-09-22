@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Chatbot</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        #chat { border: 1px solid #ccc; padding: 20px; width: 400px; height: 400px; overflow-y: auto; }
+        #input { width: 300px; }
+        #send { padding: 5px 10px; }
+        #login { margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <h2>AI Chatbot</h2>
+    <div id="login">
+        <input type="text" id="username" placeholder="Username" />
+        <input type="password" id="password" placeholder="Password" />
+        <button id="loginBtn">Login</button>
+        <span id="loginStatus" style="color:red"></span>
+    </div>
+    <div id="chat" style="display:none"></div>
+    <input type="text" id="input" placeholder="Type your message..." style="display:none" />
+    <button id="send" style="display:none">Send</button>
+    <script>
+        const chatDiv = document.getElementById('chat');
+        const input = document.getElementById('input');
+        const sendBtn = document.getElementById('send');
+        const loginDiv = document.getElementById('login');
+        const loginBtn = document.getElementById('loginBtn');
+        const loginStatus = document.getElementById('loginStatus');
+        let username = '';
+        let password = '';
+        function appendMessage(msg) {
+            chatDiv.innerHTML += `<div>${msg}</div>`;
+            chatDiv.scrollTop = chatDiv.scrollHeight;
+        }
+        function getAuthHeader() {
+            return 'Basic ' + btoa(username + ':' + password);
+        }
+        loginBtn.onclick = async function() {
+            username = document.getElementById('username').value.trim();
+            password = document.getElementById('password').value;
+            if (!username || !password) {
+                loginStatus.textContent = 'Please enter username and password.';
+                return;
+            }
+            try {
+                const res = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': getAuthHeader()
+                    },
+                    body: JSON.stringify({ message: 'test' })
+                });
+                if (res.status === 401) {
+                    loginStatus.textContent = 'Invalid credentials.';
+                    return;
+                }
+                if (!res.ok) {
+                    loginStatus.textContent = 'Server error: ' + res.status;
+                    return;
+                }
+                loginDiv.style.display = 'none';
+                chatDiv.style.display = '';
+                input.style.display = '';
+                sendBtn.style.display = '';
+                loginStatus.textContent = '';
+                appendMessage('<i>Login successful. Start chatting!</i>');
+            } catch (e) {
+                loginStatus.textContent = 'Network or server error.';
+            }
+        };
+        sendBtn.onclick = async function() {
+            const message = input.value.trim();
+            if (!message) return;
+            appendMessage(`<b>You:</b> ${message}`);
+            input.value = '';
+            try {
+                const res = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': getAuthHeader()
+                    },
+                    body: JSON.stringify({ message })
+                });
+                if (!res.ok) {
+                    appendMessage(`<span style='color:red'><b>Error:</b> Server error: ${res.status}</span>`);
+                    return;
+                }
+                let data;
+                try {
+                    data = await res.json();
+                } catch (e) {
+                    appendMessage(`<span style='color:red'><b>Error:</b> Invalid response format.</span>`);
+                    return;
+                }
+                if (data.reply) {
+                    appendMessage(`<b>AI:</b> ${data.reply}`);
+                } else if (data.error) {
+                    appendMessage(`<span style='color:red'><b>Error:</b> ${data.error}</span>`);
+                }
+            } catch (e) {
+                appendMessage(`<span style='color:red'><b>Error:</b> Network or server error.</span>`);
+            }
+        };
+    </script>
+</body>
+</html>
