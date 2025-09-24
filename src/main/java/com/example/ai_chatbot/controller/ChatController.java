@@ -20,11 +20,10 @@ public class ChatController {
     @PostMapping
     public ResponseEntity<?> chat(@RequestBody Map<String, String> payload, Authentication authentication) {
         String message = payload.get("message");
-        if (message == null) {
+        if (message == null)
             return ResponseEntity.badRequest().body(Map.of("error", "Missing message"));
-        }
-        String userId = authentication.getName();
-        Map<String, Object> response = chatService.chat(userId, message);
-        return ResponseEntity.ok(response);
+        if (authentication == null || authentication.getName() == null)
+            return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+        return ResponseEntity.ok(chatService.chat(authentication.getName(), message));
     }
 }
