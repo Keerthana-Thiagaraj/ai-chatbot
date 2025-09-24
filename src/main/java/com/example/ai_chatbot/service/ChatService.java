@@ -15,29 +15,26 @@ public class ChatService {
     private final OllamaChatModel chatModel;
     private final ChatMessageRepository chatMessageRepository;
 
-    public ChatService(ChatMessageRepository chatMessageRepository) {
-        this.chatModel = OllamaChatModel.builder()
-                .baseUrl("http://localhost:11434") // default Ollama server
-                .modelName("llama2")               // or mistral, phi3, codellama etc.
-                .build();
+    public ChatService(ChatMessageRepository chatMessageRepository, OllamaChatModel chatModel) {
+        this.chatModel = chatModel;
         this.chatMessageRepository = chatMessageRepository;
     }
 
+    // For production use, keep the old constructor for backward compatibility
+    public ChatService(ChatMessageRepository chatMessageRepository) {
+        this(chatMessageRepository, OllamaChatModel.builder()
+                .baseUrl("http://localhost:11434") // default Ollama server
+                .modelName("llama2")               // or mistral, phi3, codellama etc.
+                .build());
+    }
+
     public Map<String, Object> chat(String userId, String userMessage) {
-        // Save user message
         chatMessageRepository.save(new ChatMessage(userId, "USER", userMessage, LocalDateTime.now()));
         String aiReply = String.valueOf(chatModel.chat(List.of(UserMessage.from(userMessage))).aiMessage());
-        // Save AI reply
         chatMessageRepository.save(new ChatMessage(userId, "AI", aiReply, LocalDateTime.now()));
-        // Retrieve full history
-        List<ChatMessage> history = chatMessageRepository.findByUserIdOrderByTimestampAsc(userId);
         List<String> formattedHistory = new ArrayList<>();
-        for (ChatMessage msg : history) {
-            formattedHistory.add(msg.getSender() + ": " + msg.getMessage());
-        }
-        Map<String, Object> result = new HashMap<>();
-        result.put("reply", aiReply);
-        result.put("history", formattedHistory);
-        return result;
+        chatMessageRepository.findByUserIdOrderByTimestampAsc(userId)
+            .forEach(msg -> formattedHistory.add(msg.getSender() + ": " + msg.getMessage()));
+        return Map.of("reply", aiReply, "history", formattedHistory);
     }
 }
