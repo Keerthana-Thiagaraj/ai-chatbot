@@ -4,6 +4,7 @@ import com.example.ai_chatbot.model.ChatMessage;
 import com.example.ai_chatbot.repository.ChatMessageRepository;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.ollama.OllamaChatModel;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -21,6 +22,7 @@ public class ChatService {
     }
 
     // For production use, keep the old constructor for backward compatibility
+    @Autowired
     public ChatService(ChatMessageRepository chatMessageRepository) {
         this(chatMessageRepository, OllamaChatModel.builder()
                 .baseUrl("http://localhost:11434") // default Ollama server
